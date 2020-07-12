@@ -1,0 +1,1166 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "name": "test_extraction.ipynb",
+      "provenance": [],
+      "collapsed_sections": []
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "accelerator": "GPU"
+  },
+  "cells": [
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "I5CzNlsFYXWZ",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "import numpy as np\n",
+        "import pandas as pd\n",
+        "import tensorboard as tf"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "-D1PbasTY9TP",
+        "colab_type": "code",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 497
+        },
+        "outputId": "18052743-c5f3-4c07-a7a3-d571e5d7fb4c"
+      },
+      "source": [
+        "!pip install bert-for-tf2\n",
+        "!pip install sentencepiece"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "Collecting bert-for-tf2\n",
+            "\u001b[?25l  Downloading https://files.pythonhosted.org/packages/35/5c/6439134ecd17b33fe0396fb0b7d6ce3c5a120c42a4516ba0e9a2d6e43b25/bert-for-tf2-0.14.4.tar.gz (40kB)\n",
+            "\r\u001b[K     |████████                        | 10kB 19.5MB/s eta 0:00:01\r\u001b[K     |████████████████▏               | 20kB 4.8MB/s eta 0:00:01\r\u001b[K     |████████████████████████▎       | 30kB 6.2MB/s eta 0:00:01\r\u001b[K     |████████████████████████████████| 40kB 3.1MB/s \n",
+            "\u001b[?25hCollecting py-params>=0.9.6\n",
+            "  Downloading https://files.pythonhosted.org/packages/a4/bf/c1c70d5315a8677310ea10a41cfc41c5970d9b37c31f9c90d4ab98021fd1/py-params-0.9.7.tar.gz\n",
+            "Collecting params-flow>=0.8.0\n",
+            "  Downloading https://files.pythonhosted.org/packages/a9/95/ff49f5ebd501f142a6f0aaf42bcfd1c192dc54909d1d9eb84ab031d46056/params-flow-0.8.2.tar.gz\n",
+            "Requirement already satisfied: numpy in /usr/local/lib/python3.6/dist-packages (from params-flow>=0.8.0->bert-for-tf2) (1.18.5)\n",
+            "Requirement already satisfied: tqdm in /usr/local/lib/python3.6/dist-packages (from params-flow>=0.8.0->bert-for-tf2) (4.41.1)\n",
+            "Building wheels for collected packages: bert-for-tf2, py-params, params-flow\n",
+            "  Building wheel for bert-for-tf2 (setup.py) ... \u001b[?25l\u001b[?25hdone\n",
+            "  Created wheel for bert-for-tf2: filename=bert_for_tf2-0.14.4-cp36-none-any.whl size=30114 sha256=749eb94f60932286c1e736780deffb03e01c401786883c5c8ade8cf70fc48bbb\n",
+            "  Stored in directory: /root/.cache/pip/wheels/cf/3f/4d/79d7735015a5f523648df90d871ce8e89a7df8185f7703eeab\n",
+            "  Building wheel for py-params (setup.py) ... \u001b[?25l\u001b[?25hdone\n",
+            "  Created wheel for py-params: filename=py_params-0.9.7-cp36-none-any.whl size=7302 sha256=84027ac50ccfb7130bc475e5c8f2f3ee034573475f12511590392df0b79791ce\n",
+            "  Stored in directory: /root/.cache/pip/wheels/67/f5/19/b461849a50aefdf4bab47c4756596e82ee2118b8278e5a1980\n",
+            "  Building wheel for params-flow (setup.py) ... \u001b[?25l\u001b[?25hdone\n",
+            "  Created wheel for params-flow: filename=params_flow-0.8.2-cp36-none-any.whl size=19473 sha256=3496d1c87d327da5512506516aec3addc993b8db66bf4a004abebee8bc4ee2f7\n",
+            "  Stored in directory: /root/.cache/pip/wheels/08/c8/7f/81c86b9ff2b86e2c477e3914175be03e679e596067dc630c06\n",
+            "Successfully built bert-for-tf2 py-params params-flow\n",
+            "Installing collected packages: py-params, params-flow, bert-for-tf2\n",
+            "Successfully installed bert-for-tf2-0.14.4 params-flow-0.8.2 py-params-0.9.7\n",
+            "Collecting sentencepiece\n",
+            "\u001b[?25l  Downloading https://files.pythonhosted.org/packages/d4/a4/d0a884c4300004a78cca907a6ff9a5e9fe4f090f5d95ab341c53d28cbc58/sentencepiece-0.1.91-cp36-cp36m-manylinux1_x86_64.whl (1.1MB)\n",
+            "\u001b[K     |████████████████████████████████| 1.1MB 7.4MB/s \n",
+            "\u001b[?25hInstalling collected packages: sentencepiece\n",
+            "Successfully installed sentencepiece-0.1.91\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "x3YJ0eX7Z8yj",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "import bert\n",
+        "import tensorflow_hub as hub"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "eFkr0oORacZ_",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "tokenizer=bert.bert_tokenization.FullTokenizer\n",
+        "bert_layer=hub.KerasLayer('https://tfhub.dev/tensorflow/bert_en_uncased_L-12_H-768_A-12/2',trainable=False)\n"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "m08hnkQudgax",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "vocab=bert_layer.resolved_object.vocab_file.asset_path.numpy()\n",
+        "do_lower_case=bert_layer.resolved_object.do_lower_case.numpy()"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "xALC0zFodwwf",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "df=pd.read_csv(\"/content/drive/My Drive/train.csv\")"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "UdjBlP4cdzju",
+        "colab_type": "code",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 194
+        },
+        "outputId": "047cb52e-a5f4-4169-e36d-96062f0ddce3"
+      },
+      "source": [
+        "df.head()"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/html": [
+              "<div>\n",
+              "<style scoped>\n",
+              "    .dataframe tbody tr th:only-of-type {\n",
+              "        vertical-align: middle;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe tbody tr th {\n",
+              "        vertical-align: top;\n",
+              "    }\n",
+              "\n",
+              "    .dataframe thead th {\n",
+              "        text-align: right;\n",
+              "    }\n",
+              "</style>\n",
+              "<table border=\"1\" class=\"dataframe\">\n",
+              "  <thead>\n",
+              "    <tr style=\"text-align: right;\">\n",
+              "      <th></th>\n",
+              "      <th>textID</th>\n",
+              "      <th>text</th>\n",
+              "      <th>selected_text</th>\n",
+              "      <th>sentiment</th>\n",
+              "    </tr>\n",
+              "  </thead>\n",
+              "  <tbody>\n",
+              "    <tr>\n",
+              "      <th>0</th>\n",
+              "      <td>cb774db0d1</td>\n",
+              "      <td>I`d have responded, if I were going</td>\n",
+              "      <td>I`d have responded, if I were going</td>\n",
+              "      <td>neutral</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>1</th>\n",
+              "      <td>549e992a42</td>\n",
+              "      <td>Sooo SAD I will miss you here in San Diego!!!</td>\n",
+              "      <td>Sooo SAD</td>\n",
+              "      <td>negative</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>2</th>\n",
+              "      <td>088c60f138</td>\n",
+              "      <td>my boss is bullying me...</td>\n",
+              "      <td>bullying me</td>\n",
+              "      <td>negative</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>3</th>\n",
+              "      <td>9642c003ef</td>\n",
+              "      <td>what interview! leave me alone</td>\n",
+              "      <td>leave me alone</td>\n",
+              "      <td>negative</td>\n",
+              "    </tr>\n",
+              "    <tr>\n",
+              "      <th>4</th>\n",
+              "      <td>358bd9e861</td>\n",
+              "      <td>Sons of ****, why couldn`t they put them on t...</td>\n",
+              "      <td>Sons of ****,</td>\n",
+              "      <td>negative</td>\n",
+              "    </tr>\n",
+              "  </tbody>\n",
+              "</table>\n",
+              "</div>"
+            ],
+            "text/plain": [
+              "       textID  ... sentiment\n",
+              "0  cb774db0d1  ...   neutral\n",
+              "1  549e992a42  ...  negative\n",
+              "2  088c60f138  ...  negative\n",
+              "3  9642c003ef  ...  negative\n",
+              "4  358bd9e861  ...  negative\n",
+              "\n",
+              "[5 rows x 4 columns]"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          },
+          "execution_count": 10
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "KUMzN0xSu7Fd",
+        "colab_type": "code",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 35
+        },
+        "outputId": "ffe509ec-1c5d-4ada-af15-6c99302d5e78"
+      },
+      "source": [
+        "df.shape"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "(27481, 4)"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          },
+          "execution_count": 11
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "xsCC33gjd0cN",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "df.drop(\"textID\",axis=1,inplace=True)\n",
+        "df.dropna(inplace=True)"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "vYHprQoeefMz",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "token=tokenizer(vocab_file=vocab,do_lower_case=do_lower_case)"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "jD9Ya33oe7OO",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "def get_tokens(sent,sentiment):\n",
+        "  return ['[CLS]']+token.tokenize(sent)+['[SEP]']+['[SEP]']+token.tokenize(sentiment)+['[SEP]']\n",
+        "def get_ids(tokens):\n",
+        "  return token.convert_tokens_to_ids(tokens)\n",
+        "def get_mask(sent,max_len):\n",
+        "  return [1]*len(sent)+[0]*(max_len-len(sent))\n",
+        "  \n"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "Y3u_6MfsxBe4",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "def get_segments(tokens_list,seq):\n",
+        "  if seq%2==0:\n",
+        "    seq=0\n",
+        "  else:\n",
+        "    seq=1\n",
+        "  sent_rel=[]\n",
+        "  return [seq]*len(tokens_list)\n",
+        "        \n",
+        "\n"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "svOQbnkSg8Tf",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "data=[get_tokens(sent,df.iloc[i,-1]) for i,sent in enumerate(df['text'])]"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "jSSUMSFlLflT",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "max_len=max(len(sent) for sent in data)"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "py2Egxo3Lm5c",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "def get_pad(sent,max_len):\n",
+        "  temp_len=len(sent)\n",
+        "  req_len=max_len-temp_len\n",
+        "  final_sent=sent+['[PAD]']*req_len\n",
+        "  return get_ids(final_sent),final_sent"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "1wM0KU3ChLW0",
+        "colab_type": "code",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 1000
+        },
+        "outputId": "1a7ebc5a-f642-4f44-85a3-cd32494dd381"
+      },
+      "source": [
+        "a=get_pad(data[0],max_len)[1]\n",
+        "get_mask(data[0],max_len)\n"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "[1,\n",
+              " 1,\n",
+              " 1,\n",
+              " 1,\n",
+              " 1,\n",
+              " 1,\n",
+              " 1,\n",
+              " 1,\n",
+              " 1,\n",
+              " 1,\n",
+              " 1,\n",
+              " 1,\n",
+              " 1,\n",
+              " 1,\n",
+              " 1,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0,\n",
+              " 0]"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          },
+          "execution_count": 19
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "1BqHAgXkzraR",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "def get_outputs(train,test,max_len):\n",
+        "  out_1=[0]*max_len\n",
+        "  out_2=[0]*max_len\n",
+        "  test=token.tokenize(test)\n",
+        "  word_1=test[0]\n",
+        "  word_2=test[-1]\n",
+        "  for i in range(max_len):\n",
+        "    if train[i]==word_1:\n",
+        "      out_1[i]=1\n",
+        "      break\n",
+        "  for i in reversed(range(max_len)):\n",
+        "    if train[i]==word_2:\n",
+        "      out_2[i]=1\n",
+        "      break\n",
+        "  return out_1,out_2"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "c3zf1n4zPtH9",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "simple_input=[get_pad(sent,max_len)[0] for sent in data]"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "Dt8oWBjzQghm",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "input_mask=[get_mask(sent,max_len) for sent in data]"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "sjOiwxPvSCdm",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "sent_input=[get_segments(id_sent,i) for i,id_sent in enumerate(simple_input)]"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "71iXAea4Sgm4",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "\n",
+        "start_out_tok=[]\n",
+        "end_out_tok=[]\n",
+        "for i in range(df.shape[0]):\n",
+        "  try:\n",
+        "    a=get_pad(data[i],max_len)[1]\n",
+        "    o1=get_outputs(a,df.iloc[i,1],max_len)[0]\n",
+        "    o2=get_outputs(a,df.iloc[i,1],max_len)[1]\n",
+        "    start_out_tok.append(o1)\n",
+        "    end_out_tok.append(o2)\n",
+        "  except:\n",
+        "    print(f\"the index{i}\")\n",
+        "    break"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "BRVRqbP4wOiG",
+        "colab_type": "code",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 35
+        },
+        "outputId": "1e185e47-4dad-43cb-d561-f2a383bc1b45"
+      },
+      "source": [
+        "len(simple_input)==len(input_mask)==len(sent_input)==len(start_out_tok)==len(end_out_tok)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "True"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          },
+          "execution_count": 25
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "6i9qkmBSwq17",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "simple_input=np.array(simple_input)\n",
+        "input_mask=np.array(input_mask)\n",
+        "sent_input=np.array(sent_input)\n",
+        "start_out_tok=np.array(start_out_tok)\n",
+        "end_out_tok=np.array(end_out_tok)"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "ug-tYvZ_wdz1",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "split_size=int(0.75*len(simple_input))\n",
+        "simple_input_train=simple_input[:split_size,:]\n",
+        "input_mask_train=input_mask[:split_size,:]\n",
+        "sent_input_train=sent_input[:split_size,:]\n",
+        "start_out_tok_train=start_out_tok[:split_size,:]\n",
+        "end_out_tok_train=end_out_tok[:split_size,:]\n"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "C-DvTqIIyC-t",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "simple_input_valid=simple_input[split_size:,:]\n",
+        "input_mask_valid=input_mask[split_size:,:]\n",
+        "sent_input_valid=sent_input[split_size:,:]\n",
+        "start_out_tok_valid=start_out_tok[split_size:,:]\n",
+        "end_out_tok_valid=end_out_tok[split_size:,:]\n"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "k-FcZi9eYR3d",
+        "colab_type": "code",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 35
+        },
+        "outputId": "e21847e5-f185-4072-bdee-7d23742c1c16"
+      },
+      "source": [
+        "simple_input_train.shape==input_mask_train.shape==sent_input_train.shape"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "True"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          },
+          "execution_count": 41
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "D_r9VH8kYjJ2",
+        "colab_type": "code",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 35
+        },
+        "outputId": "84175937-3be3-4ce0-84f0-ac8e7f27b121"
+      },
+      "source": [
+        "simple_input_train.shape[0]==start_out_tok_train.shape[0]"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "True"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          },
+          "execution_count": 42
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "SttnAkO_YWon",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "from tensorflow.keras.layers import Dense,Flatten,Conv1D,concatenate,Dropout,Softmax,Input,GlobalAveragePooling1D\n",
+        "from tensorflow.keras.models import Model\n",
+        "from tensorflow.keras.callbacks import TensorBoard\n",
+        "import tensorflow as tf"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "75X3-PHlQobD",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "input_1=Input((max_len,),dtype=tf.int32, name='input_word_ids')\n",
+        "input_2=Input((max_len,),dtype=tf.int32, name='input_mask')\n",
+        "input_3=Input((max_len,),dtype=tf.int32, name='input_type_ids')\n",
+        "bert_,_=hub.KerasLayer('https://tfhub.dev/tensorflow/bert_en_uncased_L-12_H-768_A-12/2',trainable=False)([input_1,input_2,input_3])\n",
+        "x=Conv1D(1,1)(_)\n",
+        "x=Flatten()(x)\n",
+        "outs1=Dense(max_len,activation='softmax')(x)\n",
+        "outs2=Dense(max_len,activation='softmax')(x)\n",
+        "\n"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "J7V7vYaZayLo",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "model=Model(inputs={'input_word_ids':input_1,'input_mask':input_2,'input_type_ids':input_3},outputs={'output1':outs1,'output2':outs2})"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "TobW_VSCbxO3",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "inputs_bert={'input_word_ids':simple_input_train,'input_mask':input_mask_train,'input_type_ids':sent_input_train}\n",
+        "valid_bert={'input_word_ids':simple_input_valid,'input_mask':input_mask_valid,'input_type_ids':sent_input_valid}"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "0aTZcI0ZzryG",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "def custom_metric(s1,s2):\n",
+        "  in1=set(s1)\n",
+        "  in2=set(s2)\n",
+        "  intersec=in1.intersection(in2)\n",
+        "  return (intersec)/(len(in1)+len(in2)-intersec)"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "7wHGdCjl2JHh",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "import tensorflow as tf"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "HtoU7OqfSrfZ",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "model.compile(optimizer='Adam',loss='binary_crossentropy')"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "YDzhDVoYS8w9",
+        "colab_type": "code",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 390
+        },
+        "outputId": "bcf2cead-8994-4205-be79-5d7024f38b91"
+      },
+      "source": [
+        "\n",
+        "outs={'output1':start_out_tok_train,'output2':end_out_tok_train}\n",
+        "outs_valid={'output1':start_out_tok_valid,'output2':end_out_tok_valid}\n",
+        "model.fit(inputs_bert,outs,epochs=10,validation_data=(valid_bert,outs_valid))"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "Epoch 1/10\n",
+            "645/645 [==============================] - 130s 202ms/step - loss: 0.2364 - dense_loss: 0.1094 - dense_1_loss: 0.1270 - val_loss: 0.2360 - val_dense_loss: 0.1097 - val_dense_1_loss: 0.1263\n",
+            "Epoch 2/10\n",
+            "645/645 [==============================] - 130s 202ms/step - loss: 0.2322 - dense_loss: 0.1094 - dense_1_loss: 0.1228 - val_loss: 0.2319 - val_dense_loss: 0.1097 - val_dense_1_loss: 0.1222\n",
+            "Epoch 3/10\n",
+            "645/645 [==============================] - 130s 201ms/step - loss: 0.2308 - dense_loss: 0.1094 - dense_1_loss: 0.1214 - val_loss: 0.2305 - val_dense_loss: 0.1097 - val_dense_1_loss: 0.1208\n",
+            "Epoch 4/10\n",
+            "645/645 [==============================] - 130s 202ms/step - loss: 0.2281 - dense_loss: 0.1094 - dense_1_loss: 0.1187 - val_loss: 0.2292 - val_dense_loss: 0.1097 - val_dense_1_loss: 0.1196\n",
+            "Epoch 5/10\n",
+            "645/645 [==============================] - 130s 202ms/step - loss: 0.2269 - dense_loss: 0.1093 - dense_1_loss: 0.1176 - val_loss: 0.2274 - val_dense_loss: 0.1097 - val_dense_1_loss: 0.1177\n",
+            "Epoch 6/10\n",
+            "645/645 [==============================] - 130s 201ms/step - loss: 0.2262 - dense_loss: 0.1094 - dense_1_loss: 0.1168 - val_loss: 0.2245 - val_dense_loss: 0.1097 - val_dense_1_loss: 0.1148\n",
+            "Epoch 7/10\n",
+            "645/645 [==============================] - 130s 202ms/step - loss: 0.2204 - dense_loss: 0.1094 - dense_1_loss: 0.1110 - val_loss: 0.2194 - val_dense_loss: 0.1097 - val_dense_1_loss: 0.1097\n",
+            "Epoch 8/10\n",
+            "645/645 [==============================] - 130s 202ms/step - loss: 0.1969 - dense_loss: 0.1004 - dense_1_loss: 0.0965 - val_loss: 0.0540 - val_dense_loss: 0.0270 - val_dense_1_loss: 0.0270\n",
+            "Epoch 9/10\n",
+            "645/645 [==============================] - 130s 202ms/step - loss: 0.0396 - dense_loss: 0.0194 - dense_1_loss: 0.0202 - val_loss: 0.0381 - val_dense_loss: 0.0184 - val_dense_1_loss: 0.0197\n",
+            "Epoch 10/10\n",
+            "645/645 [==============================] - 130s 202ms/step - loss: 0.0356 - dense_loss: 0.0174 - dense_1_loss: 0.0182 - val_loss: 0.0371 - val_dense_loss: 0.0179 - val_dense_1_loss: 0.0192\n"
+          ],
+          "name": "stdout"
+        },
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "<tensorflow.python.keras.callbacks.History at 0x7f97601251d0>"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          },
+          "execution_count": 50
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "aA7W78XvTRFo",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "tweet='finally got to see iphone it may not be revolutionary but absolutely gorgeous'\n",
+        "sentiment='positive'\n",
+        "\n"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "4Utgff-Qo7ez",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "data_test=[get_tokens(tweet,sentiment)]"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "c12gElAknz_J",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "test_input=[get_pad(t,max_len)[0] for t in data_test]\n",
+        "test_mask=[get_mask(t,max_len) for t in data_test]\n",
+        "test_sent_segment=[get_segments(x,i) for i,x in enumerate(test_input)]"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "HExDzXlbpaBB",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "test_input=np.array(test_input)\n",
+        "test_mask=np.array(test_mask)\n",
+        "test_sent_segment=np.array(test_sent_segment)"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "loMPfAysqJ9q",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "predictions=model.predict({'input_word_ids':test_input,'input_mask':test_mask,'input_type_ids':test_sent_segment})"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "Vrlv7bCrrLFS",
+        "colab_type": "code",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 35
+        },
+        "outputId": "e92e389f-953e-452d-c1e0-eaa0febacce6"
+      },
+      "source": [
+        "predictions.get('output1').shape"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "(1, 113)"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          },
+          "execution_count": 114
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "Q9nfYst0sKy9",
+        "colab_type": "code",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 35
+        },
+        "outputId": "95a299ec-8c1f-41d2-9a78-14f418b15a68"
+      },
+      "source": [
+        "predictions.get('output2').shape"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "(1, 113)"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          },
+          "execution_count": 115
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "TRWAFwZHtjC2",
+        "colab_type": "code",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 35
+        },
+        "outputId": "b4b88388-aaa8-4786-f102-513300c8705b"
+      },
+      "source": [
+        "np.argmax(predictions.get('output1'),axis=-1)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "array([12])"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          },
+          "execution_count": 116
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "WCZxGWp2uVOy",
+        "colab_type": "code",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 35
+        },
+        "outputId": "2fa76412-d9b2-4723-a888-149d9c5cd820"
+      },
+      "source": [
+        "np.argmax(predictions.get('output2'),axis=-1)"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "array([13])"
+            ]
+          },
+          "metadata": {
+            "tags": []
+          },
+          "execution_count": 117
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "ueONotesvRwr",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        "token_tweet=np.array([get_pad(t,max_len)[1] for t in data_test])"
+      ],
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "s37R9aIkvmUi",
+        "colab_type": "code",
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 35
+        },
+        "outputId": "4fc95f87-2a4c-4141-a9b1-37f910b2b57e"
+      },
+      "source": [
+        "print(f'the word_tokens responsible for sentiment are {token_tweet[:,12:14]}')"
+      ],
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "text": [
+            "the word_tokens responsible for sentiment are [['absolutely' 'gorgeous']]\n"
+          ],
+          "name": "stdout"
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "metadata": {
+        "id": "PJpzcycztFzq",
+        "colab_type": "code",
+        "colab": {}
+      },
+      "source": [
+        ""
+      ],
+      "execution_count": null,
+      "outputs": []
+    }
+  ]
+}
